@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analyzer Bot</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #444;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"] {
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .file-input-label.has-file {
+            border-color: #4CAF50;
+            color: #4CAF50;
+            border-style: solid;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        #image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        button {
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #result-container {
+            margin-top: 30px;
+            display: none;
+        }
+
+        #result-container.visible {
+            display: block;
+        }
+
+        #result-container h2 {
+            color: #333;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        #result {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .error {
+            background-color: #fff5f5;
+            border-left-color: #e53e3e;
+            color: #c53030;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Analyzer Bot</h1>
+        <p class="subtitle">Upload an image and ask anything about it</p>
+        
+        <form id="upload-form">
+            <div class="form-group">
+                <label for="prompt">What would you like to know?</label>
+                <input type="text" id="prompt" name="prompt" placeholder="e.g., Describe this image in detail" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Upload an image</label>
+                <div class="file-input-wrapper">
+                    <div class="file-input-label" id="file-label">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span id="file-label-text">Click or drag to upload</span>
+                    </div>
+                    <input type="file" id="image" name="image" accept="image/*" required>
+                </div>
+                <p class="file-name" id="file-name"></p>
+                <img id="image-preview" alt="Preview">
+            </div>
+            
+            <button type="submit" id="submit-btn">Analyze Image</button>
+        </form>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>Analyzing your image...</span>
+        </div>
+        
+        <div id="result-container">
+            <h2>Analysis Result</h2>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('image');
+        const fileLabel = document.getElementById('file-label');
+        const fileLabelText = document.getElementById('file-label-text');
+        const fileName = document.getElementById('file-name');
+        const imagePreview = document.getElementById('image-preview');
+        const submitBtn = document.getElementById('submit-btn');
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('result-container');
+        const resultElement = document.getElementById('result');
+
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                fileName.textContent = file.name;
+                fileLabel.classList.add('has-file');
+                fileLabelText.textContent = 'Image selected';
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                resetFileInput();
+            }
+        });
+
+        function resetFileInput() {
+            fileName.textContent = '';
+            fileLabel.classList.remove('has-file');
+            fileLabelText.textContent = 'Click or drag to upload';
+            imagePreview.style.display = 'none';
+        }
+
+        // Handle form submission
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.classList.add('active');
+            resultContainer.classList.remove('visible');
+
+            try {
+                const formData = new FormData(this);
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    resultElement.textContent = data.result;
+                    resultElement.classList.remove('error');
+                } else {
+                    resultElement.textContent = `Error: ${data.error}`;
+                    resultElement.classList.add('error');
+                }
+
+                resultContainer.classList.add('visible');
+
+            } catch (error) {
+                resultElement.textContent = 'Error: Unable to connect to the server. Please try again.';
+                resultElement.classList.add('error');
+                resultContainer.classList.add('visible');
+            } finally {
+                submitBtn.disabled = false;
+                loading.classList.remove('active');
+            }
+        });
+
+        // Drag and drop support
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, () => {
+                fileLabel.style.borderColor = '#667eea';
+                fileLabel.style.background = 'rgba(102, 126, 234, 0.05)';
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            fileLabel.addEventListener(eventName, () => {
+                fileLabel.style.borderColor = '';
+                fileLabel.style.background = '';
+            }, false);
+        });
+
+        fileLabel.addEventListener('drop', function(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+            fileInput.dispatchEvent(new Event('change'));
+        }, false);
+    </script>
+</body>
+</html>
